@@ -1,0 +1,43 @@
+{
+  "name": "everything-client-edge",
+  "version": "0.0.0",
+  "description": "A library for interacting with the Everything search engine.",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r prepack",
+    "check": "biome check . --write --unsafe && biome format . --write",
+    "format": "prettier --write --list-different . --ignore-path .gitignore",
+    "postinstall": "githooks install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DemoMacro/everything-client.git"
+  },
+  "keywords": [
+    "everything",
+    "search",
+    "engine",
+    "client",
+    "library"
+  ],
+  "author": {
+    "name": "Demo Macro",
+    "email": "abc@imst.xyz",
+    "url": "https://imst.xyz/"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/DemoMacro/everything-client/issues"
+  },
+  "homepage": "https://github.com/DemoMacro/everything-client#readme",
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@funish/githooks": "0.0.6-edge.1",
+    "@funish/githooks-config": "0.0.3-edge.0",
+    "@funish/lint": "0.0.3-edge.0",
+    "@types/node": "22.13.13",
+    "prettier": "3.5.3",
+    "unbuild": "3.5.0"
+  },
+  "packageManager": "pnpm@10.7.0+sha512.6b865ad4b62a1d9842b61d674a393903b871d9244954f652b8842c2b553c72176b278f64c463e52d40fff8aba385c235c8c9ecf5cc7de4fd78b8bb6d49633ab6"
+}

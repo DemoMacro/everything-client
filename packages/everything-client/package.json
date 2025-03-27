@@ -1,0 +1,55 @@
+{
+  "name": "everything-client",
+  "version": "0.0.0",
+  "description": "A library for interacting with the Everything search engine.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "assets"
+  ],
+  "scripts": {
+    "build": "unbuild",
+    "dev": "unbuild --stub",
+    "prepack": "pnpm build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DemoMacro/everything-client.git"
+  },
+  "keywords": [
+    "everything",
+    "search",
+    "engine",
+    "client",
+    "library"
+  ],
+  "author": {
+    "name": "Demo Macro",
+    "email": "abc@imst.xyz",
+    "url": "https://imst.xyz/"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/DemoMacro/everything-client/issues"
+  },
+  "homepage": "https://github.com/DemoMacro/everything-client#readme",
+  "dependencies": {
+    "ofetch": "1.4.1"
+  },
+  "optionalDependencies": {
+    "@types/ffi-napi": "4.0.10",
+    "@types/ref-napi": "3.0.11",
+    "ffi-napi": "4.0.3",
+    "ref-napi": "3.0.3"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "everything-client-examples",
+  "version": "1.0.0",
+  "description": "Examples for everything-client",
+  "scripts": {
+    "cli": "vite-node cli-example.ts",
+    "ipc": "vite-node ipc-example.ts",
+    "http": "vite-node http-example.ts"
+  },
+  "dependencies": {
+    "everything-client": "workspace:*"
+  }
+}
