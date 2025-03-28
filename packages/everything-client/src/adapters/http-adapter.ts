@@ -57,6 +57,28 @@ interface StatusResponse {
 }
 
 /**
+ * Default adapter options
+ */
+const DEFAULT_OPTIONS: HTTPAdapterOptions = {
+  serverUrl: "http://localhost:8080",
+  timeout: 5000,
+};
+
+/**
+ * Create a new HTTP adapter with the provided options
+ */
+export function createHTTPAdapter(
+  options: Partial<HTTPAdapterOptions> = {},
+): HTTPAdapter {
+  const adapterOptions: HTTPAdapterOptions = {
+    ...DEFAULT_OPTIONS,
+    ...options,
+  };
+
+  return new HTTPAdapter(adapterOptions);
+}
+
+/**
  * Adapter for HTTP communication with Everything's HTTP server
  */
 export class HTTPAdapter implements BaseAdapter {

@@ -76,7 +76,7 @@ import { createClient } from "everything-client";
 
 const everything = createClient({
   adapter: "http", // Only HTTP adapter is available in browsers
-  serverUrl: "http://localhost:8080",
+  serverUrl: "http://localhost:8080", // Optional - defaults to "http://localhost:8080"
   username: "admin", // HTTP authentication username
   password: "password", // HTTP authentication password
 });
@@ -90,13 +90,41 @@ The library provides three adapters to communicate with Everything:
 
 Works in Node.js environments by using child processes to execute Everything commands. Suitable for simple integration scenarios.
 
+```typescript
+import { createCLIAdapter } from "everything-client";
+
+const adapter = createCLIAdapter({
+  cliPath: "path/to/es.exe", // Optional - defaults to "es" in PATH
+  timeout: 10000, // Optional - defaults to 10000ms
+});
+```
+
 ### IPC Adapter
 
 Windows-specific Node.js implementation with direct communication with Everything using Windows messages. This is the highest performance option for Node.js applications on Windows.
 
+```typescript
+import { createIPCAdapter } from "everything-client";
+
+const adapter = createIPCAdapter({
+  timeout: 5000, // Optional - defaults to 5000ms
+});
+```
+
 ### HTTP Adapter
 
 Works in both Node.js and browser environments by communicating with Everything's built-in HTTP server using [ofetch](https://github.com/unjs/ofetch). This adapter is cross-platform and cross-environment compatible.
+
+```typescript
+import { createHTTPAdapter } from "everything-client";
+
+const adapter = createHTTPAdapter({
+  serverUrl: "http://localhost:8080", // Optional - defaults to "http://localhost:8080"
+  username: "admin", // Optional - for HTTP authentication
+  password: "password", // Optional - for HTTP authentication
+  timeout: 5000, // Optional - defaults to 5000ms
+});
+```
 
 ## Features
 

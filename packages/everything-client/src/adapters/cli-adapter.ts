@@ -35,6 +35,13 @@ const DEFAULT_OPTIONS: CLIAdapterOptions = {
 };
 
 /**
+ * Create a new CLI adapter with the provided options
+ */
+export function createCLIAdapter(options: CLIAdapterOptions = {}): CLIAdapter {
+  return new CLIAdapter(options);
+}
+
+/**
  * Adapter for CLI communication with Everything
  */
 export class CLIAdapter implements BaseAdapter {

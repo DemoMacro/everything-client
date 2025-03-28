@@ -86,7 +86,7 @@ import { createClient } from "everything-client";
 
 const everything = createClient({
   adapter: "http", // Only HTTP adapter is available in browsers
-  serverUrl: "http://localhost:8080",
+  serverUrl: "http://localhost:8080", // Optional - defaults to "http://localhost:8080"
   username: "admin", // HTTP authentication username
   password: "password", // HTTP authentication password
 });
@@ -130,7 +130,7 @@ interface ClientOptions {
   // Adapter-specific options
   cliPath?: string; // CLI adapter
   ipcPort?: number; // IPC adapter
-  serverUrl?: string; // HTTP adapter
+  serverUrl?: string; // HTTP adapter - defaults to "http://localhost:8080" if not specified
   username?: string; // HTTP adapter - username for authentication
   password?: string; // HTTP adapter - password for authentication
 }
@@ -192,6 +192,18 @@ The library provides several adapters to communicate with Everything:
 - No continuous connection - stateless operation
 - Supports basic search operations and result retrieval
 - Limited support for advanced features due to CLI limitations
+- Default timeout: 10000ms
+- Default CLI path: "es" in PATH
+- Automatically resolves CLI path from package assets or system PATH
+
+```typescript
+import { createCLIAdapter } from "everything-client";
+
+const adapter = createCLIAdapter({
+  cliPath: "path/to/es.exe", // Optional - defaults to "es" in PATH
+  timeout: 10000, // Optional - defaults to 10000ms
+});
+```
 
 ### IPC Adapter
 
@@ -202,6 +214,16 @@ The library provides several adapters to communicate with Everything:
 - Full support for all Everything SDK features
 - Requires Everything to be running on the same machine
 - Supports real-time file monitoring through polling
+- Default timeout: 5000ms
+- Automatically resolves DLL path from package assets or system PATH
+
+```typescript
+import { createIPCAdapter } from "everything-client";
+
+const adapter = createIPCAdapter({
+  timeout: 5000, // Optional - defaults to 5000ms
+});
+```
 
 ### HTTP Adapter
 
@@ -212,6 +234,20 @@ The library provides several adapters to communicate with Everything:
 - Uses HTTP Basic Authentication with username and password
 - Limited feature set compared to IPC adapter
 - Requires Everything HTTP server to be enabled
+- Default server URL: "http://localhost:8080"
+- Default timeout: 5000ms
+- Uses ofetch for better HTTP communication
+
+```typescript
+import { createHTTPAdapter } from "everything-client";
+
+const adapter = createHTTPAdapter({
+  serverUrl: "http://localhost:8080", // Optional - defaults to "http://localhost:8080"
+  username: "admin", // Optional - for HTTP authentication
+  password: "password", // Optional - for HTTP authentication
+  timeout: 5000, // Optional - defaults to 5000ms
+});
+```
 
 ## Error Handling
 

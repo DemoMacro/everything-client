@@ -1,9 +1,9 @@
 import { platform } from "node:os";
 import {
   type BaseAdapter,
-  CLIAdapter,
-  HTTPAdapter,
-  IPCAdapter,
+  createCLIAdapter,
+  createHTTPAdapter,
+  createIPCAdapter,
 } from "./adapters";
 import type {
   ClientOptions,
@@ -35,16 +35,16 @@ function selectAdapter(options: ClientOptions): BaseAdapter {
   if (options.adapter && options.adapter !== "auto") {
     switch (options.adapter) {
       case "cli":
-        return new CLIAdapter({
+        return createCLIAdapter({
           cliPath: options.cliPath,
           timeout: options.timeout,
         });
       case "ipc":
-        return new IPCAdapter({
+        return createIPCAdapter({
           timeout: options.timeout,
         });
       case "http":
-        return new HTTPAdapter({
+        return createHTTPAdapter({
           serverUrl: options.serverUrl,
           username: options.username,
           password: options.password,
@@ -59,7 +59,7 @@ function selectAdapter(options: ClientOptions): BaseAdapter {
 
   // In browser environment, only HTTP adapter is available
   if (typeof window !== "undefined" && typeof process === "undefined") {
-    return new HTTPAdapter({
+    return createHTTPAdapter({
       serverUrl: options.serverUrl,
       username: options.username,
       password: options.password,
@@ -73,12 +73,12 @@ function selectAdapter(options: ClientOptions): BaseAdapter {
   if (isWindows) {
     try {
       // Prefer IPC adapter on Windows
-      return new IPCAdapter({
+      return createIPCAdapter({
         timeout: options.timeout,
       });
     } catch (error) {
       // Fall back to CLI if IPC fails
-      return new CLIAdapter({
+      return createCLIAdapter({
         cliPath: options.cliPath,
         timeout: options.timeout,
       });
@@ -86,7 +86,7 @@ function selectAdapter(options: ClientOptions): BaseAdapter {
   }
 
   // On non-Windows platforms, HTTP is the only option that might work remotely
-  return new HTTPAdapter({
+  return createHTTPAdapter({
     serverUrl: options.serverUrl,
     username: options.username,
     password: options.password,

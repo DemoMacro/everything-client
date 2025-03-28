@@ -1,6 +1,5 @@
 {
   "name": "everything-client-examples",
-  "version": "1.0.0",
   "description": "Examples for everything-client",
   "scripts": {
     "cli": "vite-node cli-example.ts",

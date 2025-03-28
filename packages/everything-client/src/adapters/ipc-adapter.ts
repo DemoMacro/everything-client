@@ -31,6 +31,13 @@ const DEFAULT_OPTIONS: IPCAdapterOptions = {
   timeout: 5000,
 };
 
+/**
+ * Create a new IPC adapter with the provided options
+ */
+export function createIPCAdapter(options: IPCAdapterOptions = {}): IPCAdapter {
+  return new IPCAdapter(options);
+}
+
 // Type for the FFI Library interface
 interface EverythingLib {
   Everything_SetSearchW: (query: string) => void;

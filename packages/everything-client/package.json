@@ -1,6 +1,6 @@
 {
   "name": "everything-client",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A library for interacting with the Everything search engine.",
   "type": "module",
   "exports": {
@@ -43,7 +43,7 @@
     "url": "https://github.com/DemoMacro/everything-client/issues"
   },
   "homepage": "https://github.com/DemoMacro/everything-client#readme",
-  "dependencies": {
+  "devDependencies": {
     "ofetch": "1.4.1"
   },
   "optionalDependencies": {
