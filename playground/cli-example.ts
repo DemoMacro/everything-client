@@ -1,9 +1,9 @@
 import { exit } from "node:process";
-import { CLIAdapter } from "../packages/everything-client/src/adapters";
+import { createCLIAdapter } from "../packages/everything-client/src/adapters";
 
 async function main() {
-  // Create CLI adapter instance
-  const adapter = new CLIAdapter({
+  // Create CLI adapter instance using factory function
+  const adapter = createCLIAdapter({
     timeout: 10000, // Set timeout to 10 seconds
   });
 
@@ -17,14 +17,14 @@ async function main() {
     const version = await adapter.getVersion();
     console.log(`Everything version: ${version}`);
 
-    // Execute search
+    // Execute search with standardized options
     console.log("\nExecuting search...");
-    const results = await adapter.search("*.pdf", {
+    const results = await adapter.search("*.txt", {
       matchCase: false,
       matchWholeWord: false,
       maxResults: 10,
-      sortBy: "date",
-      sortOrder: "desc",
+      sortBy: "name",
+      sortOrder: "asc",
     });
 
     // Display search results

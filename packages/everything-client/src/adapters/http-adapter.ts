@@ -30,30 +30,17 @@ export interface HTTPAdapterOptions {
  * Response types from the Everything HTTP API
  */
 interface SearchResponse {
+  totalResults: number;
   results: Array<{
+    type: "folder" | "file";
     name: string;
-    path: string;
-    full_path?: string;
-    size?: number;
-    date_modified: number;
-    date_created: number;
-    date_accessed: number;
+    path?: string;
+    size?: string | number;
+    date_modified?: string;
+    date_created?: string;
+    date_accessed?: string;
     attributes?: number;
-    is_directory?: boolean;
-    is_hidden?: boolean;
-    is_system?: boolean;
-    is_readonly?: boolean;
   }>;
-}
-
-interface VersionResponse {
-  version: string;
-}
-
-interface StatusResponse {
-  total_results: number;
-  indexing_complete: boolean;
-  percent_complete: number;
 }
 
 /**
@@ -84,6 +71,7 @@ export function createHTTPAdapter(
 export class HTTPAdapter implements BaseAdapter {
   private options: HTTPAdapterOptions;
   private connected = false;
+  private connecting = false;
 
   /**
    * Create a new HTTP adapter
@@ -96,14 +84,31 @@ export class HTTPAdapter implements BaseAdapter {
    * Connect to the Everything service
    */
   public async connect(): Promise<void> {
+    if (this.connected) {
+      return;
+    }
+
+    if (this.connecting) {
+      throw new EverythingConnectionError("Connection already in progress");
+    }
+
+    this.connecting = true;
+
     try {
-      // Test connection by getting version
-      await this.getVersion();
+      // Test connection by making a simple search request
+      const url = new URL("?j=1&s=*", this.options.serverUrl).toString();
+      await ofetch(url, {
+        responseType: "json",
+        timeout: this.options.timeout,
+      });
+
       this.connected = true;
     } catch (error) {
       throw new EverythingConnectionError(
         `Failed to connect to Everything HTTP server: ${error instanceof Error ? error.message : String(error)}`,
       );
+    } finally {
+      this.connecting = false;
     }
   }
 
@@ -171,41 +176,36 @@ export class HTTPAdapter implements BaseAdapter {
     }
 
     try {
-      // Build query parameters
+      // Build query parameters according to Everything HTTP API format
       const params = new URLSearchParams();
-      params.append("search", query);
+      params.append("s", query); // Search query
+      params.append("o", "0"); // Offset
+      params.append("c", "32"); // Count per page
+      params.append("j", "1"); // JSON output
+      params.append("i", options.matchCase ? "1" : "0"); // Case sensitive
+      params.append("w", options.matchWholeWord ? "1" : "0"); // Whole word
+      params.append("p", "1"); // Path
+      params.append("r", options.regex ? "1" : "0"); // Regex
+      params.append("m", options.matchCase ? "1" : "0"); // Match case
+      params.append("path_column", "1");
+      params.append("size_column", "1");
+      params.append("date_modified_column", "1");
+      params.append("date_created_column", "1");
+      params.append("attributes_column", "1");
+      params.append("sort", options.sortBy || "name");
+      params.append("ascending", options.sortOrder === "asc" ? "1" : "0");
 
-      if (options.matchCase) {
-        params.append("case", "1");
-      }
-
-      if (options.matchWholeWord) {
-        params.append("whole_word", "1");
-      }
-
-      if (options.regex) {
-        params.append("regex", "1");
-      }
-
+      // Override default parameters based on options
       if (typeof options.maxResults === "number") {
-        params.append("max_results", options.maxResults.toString());
+        params.set("c", options.maxResults.toString());
       }
-
       if (typeof options.offset === "number") {
-        params.append("offset", options.offset.toString());
-      }
-
-      if (options.sortBy) {
-        let sortParam = options.sortBy;
-        if (options.sortOrder === "desc") {
-          sortParam += "_desc";
-        }
-        params.append("sort", sortParam);
+        params.set("o", options.offset.toString());
       }
 
       // Make the request
       const data = await this.makeRequest<SearchResponse>(
-        `api/search?${params.toString()}`,
+        `?${params.toString()}`,
       );
 
       // Parse the results
@@ -226,24 +226,42 @@ export class HTTPAdapter implements BaseAdapter {
     }
 
     return data.results.map((item) => {
-      // Create dates from timestamps
-      const dateModified = new Date(item.date_modified * 1000);
-      const dateCreated = new Date(item.date_created * 1000);
-      const dateAccessed = new Date(item.date_accessed * 1000);
+      // Parse size, handle empty string case
+      const size = item.size === "" ? 0 : Number(item.size);
+
+      // Parse dates from Everything's timestamp format
+      const parseDate = (timestamp?: string) => {
+        if (!timestamp) return new Date();
+        // Everything uses 100-nanosecond intervals since January 1, 1601
+        const intervals = BigInt(timestamp);
+        const milliseconds = Number(intervals / BigInt(10000));
+        return new Date(milliseconds);
+      };
+
+      const dateModified = parseDate(item.date_modified);
+      const dateCreated = parseDate(item.date_created);
+      const dateAccessed = parseDate(item.date_accessed);
+
+      // Parse file attributes
+      const attributes = item.attributes || 0;
+      const isDirectory = item.type === "folder";
+      const isHidden = (attributes & 0x2) !== 0;
+      const isSystem = (attributes & 0x4) !== 0;
+      const isReadOnly = (attributes & 0x1) !== 0;
 
       return {
-        name: item.name,
-        path: item.path,
-        fullPath: item.full_path || `${item.path}\\${item.name}`,
-        size: item.size || 0,
+        name: item.name || "",
+        path: item.path || "",
+        fullPath: item.path ? `${item.path}\\${item.name}` : item.name,
+        size,
         dateModified,
         dateCreated,
         dateAccessed,
-        attributes: item.attributes || 0,
-        isDirectory: !!item.is_directory,
-        isHidden: !!item.is_hidden,
-        isSystem: !!item.is_system,
-        isReadOnly: !!item.is_readonly,
+        attributes,
+        isDirectory,
+        isHidden,
+        isSystem,
+        isReadOnly,
       };
     });
   }
@@ -252,28 +270,36 @@ export class HTTPAdapter implements BaseAdapter {
    * Get the Everything version
    */
   public async getVersion(): Promise<string> {
-    const data = await this.makeRequest<VersionResponse>("api/version");
-    return data.version;
+    // Everything HTTP server doesn't provide version information
+    return "Unknown Version";
   }
 
   /**
    * Rebuild the Everything index
    */
   public async rebuildIndex(): Promise<void> {
-    await this.makeRequest("api/rebuild");
+    await this.makeRequest("?j=1&rebuild=1");
   }
 
   /**
    * Get the current search status
    */
   public async getSearchStatus(): Promise<SearchStatus> {
-    const data = await this.makeRequest<StatusResponse>("api/status");
-
-    return {
-      totalResults: data.total_results,
-      indexingComplete: data.indexing_complete,
-      percentComplete: data.percent_complete,
-    };
+    try {
+      const data = await this.makeRequest<SearchResponse>("?j=1&s=*");
+      return {
+        totalResults: data.totalResults || 0,
+        indexingComplete: true, // Everything always returns complete results
+        percentComplete: 100, // Everything always returns complete results
+      };
+    } catch (error) {
+      console.warn("Failed to get search status:", error);
+      return {
+        totalResults: 0,
+        indexingComplete: false,
+        percentComplete: 0,
+      };
+    }
   }
 
   /**

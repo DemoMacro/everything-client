@@ -1,9 +1,9 @@
 import { exit } from "node:process";
-import { HTTPAdapter } from "../packages/everything-client/src/adapters";
+import { createHTTPAdapter } from "../packages/everything-client/src/adapters";
 
 async function main() {
-  // Create HTTP adapter instance
-  const adapter = new HTTPAdapter({
+  // Create HTTP adapter instance using factory function
+  const adapter = createHTTPAdapter({
     serverUrl: "http://localhost:8080", // Everything HTTP server address
     timeout: 5000, // Set timeout to 5 seconds
     // If authentication is needed, uncomment and set username and password below
@@ -21,14 +21,14 @@ async function main() {
     const version = await adapter.getVersion();
     console.log(`Everything version: ${version}`);
 
-    // Execute search
+    // Execute search with standardized options
     console.log("\nExecuting search...");
-    const results = await adapter.search("*.pdf", {
+    const results = await adapter.search("*.txt", {
       matchCase: false,
       matchWholeWord: false,
       maxResults: 10,
-      sortBy: "date",
-      sortOrder: "desc",
+      sortBy: "name",
+      sortOrder: "asc",
     });
 
     // Display search results

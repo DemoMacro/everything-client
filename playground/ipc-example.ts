@@ -1,9 +1,9 @@
 import { exit } from "node:process";
-import { IPCAdapter } from "../packages/everything-client/src/adapters";
+import { createIPCAdapter } from "../packages/everything-client/src/adapters";
 
 async function main() {
-  // Create IPC adapter instance
-  const adapter = new IPCAdapter({
+  // Create IPC adapter instance using factory function
+  const adapter = createIPCAdapter({
     timeout: 5000, // Set timeout to 5 seconds
   });
 
@@ -17,14 +17,14 @@ async function main() {
     const version = await adapter.getVersion();
     console.log(`Everything version: ${version}`);
 
-    // Execute search
+    // Execute search with standardized options
     console.log("\nExecuting search...");
-    const results = await adapter.search("*.pdf", {
+    const results = await adapter.search("*.txt", {
       matchCase: false,
       matchWholeWord: false,
       maxResults: 10,
-      sortBy: "date",
-      sortOrder: "desc",
+      sortBy: "name",
+      sortOrder: "asc",
     });
 
     // Display search results
