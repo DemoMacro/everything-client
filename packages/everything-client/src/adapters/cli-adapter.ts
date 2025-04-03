@@ -48,6 +48,7 @@ export class CLIAdapter implements BaseAdapter {
   private options: CLIAdapterOptions;
   private cliPath: string;
   private connected = false;
+  private currentQuery?: string;
 
   /**
    * Create a new CLI adapter
@@ -133,6 +134,8 @@ export class CLIAdapter implements BaseAdapter {
     if (!this.connected) {
       await this.connect();
     }
+
+    this.currentQuery = query;
 
     try {
       // Build command line arguments
@@ -324,12 +327,15 @@ export class CLIAdapter implements BaseAdapter {
     }
 
     try {
-      // Since -count is not supported in older versions,
-      // do a simple search to get the total count
-      const results = await this.search("*", { maxResults: 1000 });
+      // Use -get-result-count option with the current search query
+      const command = `"${this.cliPath}" -get-result-count ${this.currentQuery || "*"}`;
+      const { stdout } = await execPromise(command, {
+        timeout: this.options.timeout,
+      });
+      const totalResults = Number.parseInt(stdout.trim(), 10);
 
       return {
-        totalResults: results.length,
+        totalResults,
         indexingComplete: true,
         percentComplete: 100,
       };

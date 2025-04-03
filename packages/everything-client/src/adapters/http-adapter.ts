@@ -72,6 +72,7 @@ export class HTTPAdapter implements BaseAdapter {
   private options: HTTPAdapterOptions;
   private connected = false;
   private connecting = false;
+  private currentQuery?: string;
 
   /**
    * Create a new HTTP adapter
@@ -174,6 +175,8 @@ export class HTTPAdapter implements BaseAdapter {
     if (!this.connected) {
       await this.connect();
     }
+
+    this.currentQuery = query;
 
     try {
       // Build query parameters according to Everything HTTP API format
@@ -285,20 +288,31 @@ export class HTTPAdapter implements BaseAdapter {
    * Get the current search status
    */
   public async getSearchStatus(): Promise<SearchStatus> {
+    if (!this.connected) {
+      await this.connect();
+    }
+
     try {
-      const data = await this.makeRequest<SearchResponse>("?j=1&s=*");
+      // Build query parameters according to Everything HTTP API format
+      const params = new URLSearchParams();
+      params.append("s", this.currentQuery || "*"); // Search query
+      params.append("j", "1"); // JSON output
+      params.append("count", "1"); // Only get count
+
+      // Make the request
+      const data = await this.makeRequest<SearchResponse>(
+        `?${params.toString()}`,
+      );
+
       return {
         totalResults: data.totalResults || 0,
-        indexingComplete: true, // Everything always returns complete results
-        percentComplete: 100, // Everything always returns complete results
+        indexingComplete: true,
+        percentComplete: 100,
       };
     } catch (error) {
-      console.warn("Failed to get search status:", error);
-      return {
-        totalResults: 0,
-        indexingComplete: false,
-        percentComplete: 0,
-      };
+      throw new EverythingSearchError(
+        `Failed to get search status: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
