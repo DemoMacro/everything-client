@@ -1,8 +1,7 @@
 import { existsSync } from "node:fs";
 import { arch, platform } from "node:os";
 import { join } from "node:path";
-import type * as FFI from "ffi-napi";
-import type * as Ref from "ref-napi";
+import koffi from "koffi";
 import type {
   FileChangeCallback,
   SearchOptions,
@@ -38,7 +37,7 @@ export function createIPCAdapter(options: IPCAdapterOptions = {}): IPCAdapter {
   return new IPCAdapter(options);
 }
 
-// Type for the FFI Library interface
+// Type for the Everything Library interface
 interface EverythingLib {
   Everything_SetSearchW: (query: string) => void;
   Everything_SetMatchPath: (enable: boolean) => void;
@@ -66,6 +65,9 @@ interface EverythingLib {
   Everything_RebuildDB: () => void;
   Everything_GetTotResults: () => number;
   Everything_IsDBLoaded: () => boolean;
+  Everything_IsAdmin: () => boolean;
+  Everything_IsAppData: () => boolean;
+  Everything_Reset: () => void;
 }
 
 /**
@@ -75,9 +77,8 @@ export class IPCAdapter implements BaseAdapter {
   private connected = false;
   private options: IPCAdapterOptions;
   private dllPath: string;
-  private ffi: typeof FFI | null = null;
-  private ref: typeof Ref | null = null;
   private everything: EverythingLib | null = null;
+  private currentQuery: string | null = null;
 
   /**
    * Create a new IPC adapter
@@ -122,54 +123,85 @@ export class IPCAdapter implements BaseAdapter {
     }
 
     try {
-      if (!this.ffi || !this.ref) {
-        try {
-          // Dynamic import, because FFI is Node.js specific and not available in browsers
-          const ffiModule = await import("ffi-napi");
-          const refModule = await import("ref-napi");
-          this.ffi = ffiModule;
-          this.ref = refModule;
-        } catch (error) {
-          throw new Error(
-            "Failed to load FFI modules. Make sure ffi-napi and ref-napi are installed.",
-          );
-        }
+      // Load the Everything DLL using koffi
+      const lib = koffi.load(this.dllPath);
+
+      // Define the Everything interface using koffi
+      this.everything = {
+        Everything_SetSearchW: lib.func(
+          "void Everything_SetSearchW(const wchar_t *)",
+        ),
+        Everything_SetMatchPath: lib.func("void Everything_SetMatchPath(bool)"),
+        Everything_SetMatchCase: lib.func("void Everything_SetMatchCase(bool)"),
+        Everything_SetMatchWholeWord: lib.func(
+          "void Everything_SetMatchWholeWord(bool)",
+        ),
+        Everything_SetRegex: lib.func("void Everything_SetRegex(bool)"),
+        Everything_SetMax: lib.func("void Everything_SetMax(uint32)"),
+        Everything_SetOffset: lib.func("void Everything_SetOffset(uint32)"),
+        Everything_SetSort: lib.func("void Everything_SetSort(uint32)"),
+        Everything_QueryW: lib.func("bool Everything_QueryW()"),
+        Everything_GetNumResults: lib.func("uint32 Everything_GetNumResults()"),
+        Everything_GetResultFileNameW: lib.func(
+          "const wchar_t *Everything_GetResultFileNameW(uint32)",
+        ),
+        Everything_GetResultPathW: lib.func(
+          "const wchar_t *Everything_GetResultPathW(uint32)",
+        ),
+        Everything_GetResultSize: lib.func(
+          "uint64 Everything_GetResultSize(uint32)",
+        ),
+        Everything_GetResultDateModified: lib.func(
+          "uint64 Everything_GetResultDateModified(uint32)",
+        ),
+        Everything_GetResultDateCreated: lib.func(
+          "uint64 Everything_GetResultDateCreated(uint32)",
+        ),
+        Everything_GetResultDateAccessed: lib.func(
+          "uint64 Everything_GetResultDateAccessed(uint32)",
+        ),
+        Everything_GetResultAttributes: lib.func(
+          "uint32 Everything_GetResultAttributes(uint32)",
+        ),
+        Everything_IsFolderResult: lib.func(
+          "bool Everything_IsFolderResult(uint32)",
+        ),
+        Everything_GetLastError: lib.func("uint32 Everything_GetLastError()"),
+        Everything_GetMajorVersion: lib.func(
+          "uint32 Everything_GetMajorVersion()",
+        ),
+        Everything_GetMinorVersion: lib.func(
+          "uint32 Everything_GetMinorVersion()",
+        ),
+        Everything_GetRevision: lib.func("uint32 Everything_GetRevision()"),
+        Everything_GetBuildNumber: lib.func(
+          "uint32 Everything_GetBuildNumber()",
+        ),
+        Everything_RebuildDB: lib.func("void Everything_RebuildDB()"),
+        Everything_GetTotResults: lib.func("uint32 Everything_GetTotResults()"),
+        Everything_IsDBLoaded: lib.func("bool Everything_IsDBLoaded()"),
+        Everything_IsAdmin: lib.func("bool Everything_IsAdmin()"),
+        Everything_IsAppData: lib.func("bool Everything_IsAppData()"),
+        Everything_Reset: lib.func("void Everything_Reset()"),
+      } as EverythingLib;
+
+      // Check if Everything service is running
+      if (!this.everything.Everything_IsDBLoaded()) {
+        throw new Error(
+          "Everything service is not running or database is not loaded",
+        );
       }
 
-      // Define the FFI interface to the Everything DLL
-      this.everything = this.ffi.Library(this.dllPath, {
-        Everything_SetSearchW: ["void", ["string"]],
-        Everything_SetMatchPath: ["void", ["bool"]],
-        Everything_SetMatchCase: ["void", ["bool"]],
-        Everything_SetMatchWholeWord: ["void", ["bool"]],
-        Everything_SetRegex: ["void", ["bool"]],
-        Everything_SetMax: ["void", ["uint32"]],
-        Everything_SetOffset: ["void", ["uint32"]],
-        Everything_SetSort: ["void", ["uint32"]],
-        Everything_QueryW: ["bool", []],
-        Everything_GetNumResults: ["uint32", []],
-        Everything_GetResultFileNameW: ["string", ["uint32"]],
-        Everything_GetResultPathW: ["string", ["uint32"]],
-        Everything_GetResultSize: ["uint64", ["uint32"]],
-        Everything_GetResultDateModified: ["uint64", ["uint32"]],
-        Everything_GetResultDateCreated: ["uint64", ["uint32"]],
-        Everything_GetResultDateAccessed: ["uint64", ["uint32"]],
-        Everything_GetResultAttributes: ["uint32", ["uint32"]],
-        Everything_IsFolderResult: ["bool", ["uint32"]],
-        Everything_GetLastError: ["uint32", []],
-        Everything_GetMajorVersion: ["uint32", []],
-        Everything_GetMinorVersion: ["uint32", []],
-        Everything_GetRevision: ["uint32", []],
-        Everything_GetBuildNumber: ["uint32", []],
-        Everything_RebuildDB: ["void", []],
-        Everything_GetTotResults: ["uint32", []],
-        Everything_IsDBLoaded: ["bool", []],
-      }) as unknown as EverythingLib;
+      // Reset search state
+      this.everything.Everything_Reset();
 
-      // Test connection
-      const lastError = this.everything.Everything_GetLastError();
-      if (lastError !== 0) {
-        throw new Error(`Everything error code: ${lastError}`);
+      // Test connection with a simple search
+      this.everything.Everything_SetSearchW("*");
+      if (!this.everything.Everything_QueryW()) {
+        const lastError = this.everything.Everything_GetLastError();
+        throw new Error(
+          `Everything search failed with error code: ${lastError}`,
+        );
       }
 
       this.connected = true;
@@ -185,7 +217,6 @@ export class IPCAdapter implements BaseAdapter {
    */
   public disconnect(): void {
     this.everything = null;
-    this.ffi = null;
     this.connected = false;
   }
 
@@ -212,6 +243,9 @@ export class IPCAdapter implements BaseAdapter {
     }
 
     try {
+      // Reset search state
+      this.everything.Everything_Reset();
+
       // Set search options
       this.everything.Everything_SetSearchW(query);
       this.everything.Everything_SetMatchPath(!!options.matchPath);
@@ -249,36 +283,29 @@ export class IPCAdapter implements BaseAdapter {
 
         const sortKey = `${options.sortBy}-${options.sortOrder || "asc"}`;
         const sortValue = sortMap[sortKey];
-
         if (sortValue) {
           this.everything.Everything_SetSort(sortValue);
         }
       }
 
-      // Execute the query
-      const success = this.everything.Everything_QueryW();
-      if (!success) {
-        throw new EverythingSearchError("Failed to execute search query");
-      }
-
-      // Wait for results
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Get total results
-      const totalResults = this.everything.Everything_GetTotResults();
-      if (totalResults === 0) {
-        return [];
+      // Execute search
+      if (!this.everything.Everything_QueryW()) {
+        const lastError = this.everything.Everything_GetLastError();
+        throw new Error(`Search failed with error code: ${lastError}`);
       }
 
       // Get results
+      const numResults = this.everything.Everything_GetNumResults();
       const results: SearchResult[] = [];
-      for (let i = 0; i < totalResults; i++) {
+
+      for (let i = 0; i < numResults; i++) {
         const result = await this.getResult(i);
         if (result) {
           results.push(result);
         }
       }
 
+      this.currentQuery = query;
       return results;
     } catch (error) {
       throw new EverythingSearchError(
@@ -335,16 +362,28 @@ export class IPCAdapter implements BaseAdapter {
     }
 
     try {
-      // Get total results using Everything_GetTotResults
-      const totalResults = this.everything.Everything_GetTotResults();
-
       // Check if database is loaded
       const indexingComplete = this.everything.Everything_IsDBLoaded();
+
+      // Get total results for current search
+      const totalResults = this.everything.Everything_GetTotResults();
+
+      // If no search has been performed, do a simple search to get total count
+      if (totalResults === 0 && this.currentQuery) {
+        this.everything.Everything_Reset();
+        this.everything.Everything_SetSearchW(this.currentQuery);
+        this.everything.Everything_QueryW();
+        return {
+          totalResults: this.everything.Everything_GetTotResults(),
+          indexingComplete,
+          percentComplete: indexingComplete ? 100 : 50,
+        };
+      }
 
       return {
         totalResults,
         indexingComplete,
-        percentComplete: indexingComplete ? 100 : 50, // This is approximate
+        percentComplete: indexingComplete ? 100 : 50,
       };
     } catch (error) {
       throw new EverythingConnectionError(

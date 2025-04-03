@@ -1,5 +1,9 @@
 import { exit } from "node:process";
 import { createCLIAdapter } from "../packages/everything-client/src/adapters";
+import {
+  EverythingConnectionError,
+  EverythingSearchError,
+} from "../packages/everything-client/src/utils/errors";
 
 async function main() {
   // Create CLI adapter instance using factory function
@@ -47,31 +51,28 @@ async function main() {
     console.log(`Total results: ${status.totalResults}`);
     console.log(`Indexing complete: ${status.indexingComplete ? "Yes" : "No"}`);
     console.log(`Completion percentage: ${status.percentComplete}%`);
-
-    // Monitor file changes
-    console.log("\nStarting file change monitoring...");
-    const unsubscribe = adapter.monitorFileChanges((changes) => {
-      console.log("\nFile changes detected:");
-      for (const change of changes) {
-        console.log(`${change.type}: ${change.path}`);
-      }
-    });
-
-    // Stop monitoring after 30 seconds
-    setTimeout(() => {
-      console.log("\nStopping file change monitoring");
-      unsubscribe();
-    }, 30000);
   } catch (error) {
-    console.error("Error occurred:", error);
+    if (error instanceof EverythingConnectionError) {
+      console.error("Connection error:", error.message);
+    } else if (error instanceof EverythingSearchError) {
+      console.error("Search error:", error.message);
+    } else {
+      console.error("Unexpected error:", error);
+    }
   } finally {
     // Disconnect
+    console.log("\nDisconnecting...");
     adapter.disconnect();
-    console.log("\nDisconnected");
+    // Wait for resources to be released
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    console.log("Disconnected");
 
     exit(0);
   }
 }
 
 // Run example
-main().catch(console.error);
+main().catch((error) => {
+  console.error("Fatal error:", error);
+  exit(1);
+});
