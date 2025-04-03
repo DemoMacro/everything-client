@@ -1,6 +1,6 @@
 {
   "name": "everything-client",
-  "version": "0.0.4",
+  "version": "0.0.5-edge.0",
   "description": "A library for interacting with the Everything search engine.",
   "type": "module",
   "exports": {
@@ -8,6 +8,21 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
+    },
+    "./cli-adapter": {
+      "types": "./dist/cli-adapter.d.ts",
+      "import": "./dist/cli-adapter.mjs",
+      "require": "./dist/cli-adapter.cjs"
+    },
+    "./http-adapter": {
+      "types": "./dist/http-adapter.d.ts",
+      "import": "./dist/http-adapter.mjs",
+      "require": "./dist/http-adapter.cjs"
+    },
+    "./ipc-adapter": {
+      "types": "./dist/ipc-adapter.d.ts",
+      "import": "./dist/ipc-adapter.mjs",
+      "require": "./dist/ipc-adapter.cjs"
     }
   },
   "main": "./dist/index.cjs",
