@@ -8,15 +8,15 @@ export default defineBuildConfig({
     },
     {
       input: "src/adapters/cli-adapter.ts",
-      name: "cli-adapter",
+      name: "cli",
     },
     {
       input: "src/adapters/http-adapter.ts",
-      name: "http-adapter",
+      name: "http",
     },
     {
       input: "src/adapters/ipc-adapter.ts",
-      name: "ipc-adapter",
+      name: "ipc",
     },
   ],
   rollup: {
